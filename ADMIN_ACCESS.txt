@@ -1,0 +1,16 @@
+🔐 Admin Panel Access Instructions:
+
+1. Direct URL: http://localhost:5175/#admin
+2. Or Shift+Click on your profile picture in the sidebar
+
+🔑 Login Credentials:
+Username: oth
+Password: asdddsaASD123
+
+⚡ Features:
+- Add new GPT profiles (name + description + optional photo)
+- Edit existing profiles
+- Delete profiles
+- Secure cybersecurity-themed authentication
+
+Note: Wrong credentials will trigger a cybersecurity message! 😄
