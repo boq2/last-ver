@@ -1614,15 +1614,27 @@ export default function App() {
                     
                     <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#2d2d30', borderRadius: '8px' }}>
                       <h3>Add New GPT Profile</h3>
-                      <form onSubmit={(e) => {
+                      <form onSubmit={async (e) => {
                         e.preventDefault();
                         const formData = new FormData(e.target);
                         const photoFile = formData.get('photo');
                         
                         let photoUrl = '/gpt-profiles/default-avatar.svg';
+                        
+                        // Convert image to base64 if uploaded
                         if (photoFile && photoFile.size > 0) {
-                          // Create a temporary URL for the uploaded image
-                          photoUrl = URL.createObjectURL(photoFile);
+                          try {
+                            const base64 = await new Promise((resolve, reject) => {
+                              const reader = new FileReader();
+                              reader.onload = () => resolve(reader.result);
+                              reader.onerror = reject;
+                              reader.readAsDataURL(photoFile);
+                            });
+                            photoUrl = base64;
+                          } catch (error) {
+                            console.error('Error converting image:', error);
+                            alert('Error uploading image. Using default avatar.');
+                          }
                         }
                         
                         const newGPT = {
@@ -1632,9 +1644,15 @@ export default function App() {
                           photo: photoUrl,
                           createdAt: new Date().toISOString()
                         };
-                        handleAddGPT(newGPT);
-                        e.target.reset();
-                        alert('GPT Profile added successfully!');
+                        
+                        try {
+                          await handleAddGPT(newGPT);
+                          e.target.reset();
+                          alert('GPT Profile added successfully and saved globally! 🌍');
+                        } catch (error) {
+                          console.error('Error adding GPT:', error);
+                          alert('Error saving GPT profile. Please try again.');
+                        }
                       }}>
                         <div style={{ marginBottom: '15px' }}>
                           <label style={{ display: 'block', marginBottom: '5px' }}>Name:</label>
@@ -1687,7 +1705,7 @@ export default function App() {
                             }} 
                           />
                           <small style={{ color: '#888', fontSize: '12px' }}>
-                            Upload an image for this GPT profile (optional)
+                            📸 Upload an image - it will be saved globally for all users!
                           </small>
                         </div>
                         <button 
@@ -1701,7 +1719,7 @@ export default function App() {
                             cursor: 'pointer' 
                           }}
                         >
-                          Add GPT Profile
+                          🌍 Add GPT Profile (Global Save)
                         </button>
                       </form>
                     </div>
@@ -1775,24 +1793,36 @@ export default function App() {
                     
                     <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#2d2d30', borderRadius: '8px' }}>
                       <h3>Add New Photo to Library</h3>
-                      <form onSubmit={(e) => {
+                      <form onSubmit={async (e) => {
                         e.preventDefault();
                         const formData = new FormData(e.target);
                         const photoFile = formData.get('libraryPhoto');
                         const title = formData.get('title');
                         
                         if (photoFile && photoFile.size > 0) {
-                          const photoUrl = URL.createObjectURL(photoFile);
-                          const newLibraryImage = {
-                            id: Date.now(),
-                            title: title || photoFile.name,
-                            url: photoUrl,
-                            filename: photoFile.name,
-                            uploadedAt: new Date().toISOString()
-                          };
-                          handleAddLibraryImage(newLibraryImage);
-                          e.target.reset();
-                          alert('Photo added to library successfully!');
+                          try {
+                            const base64 = await new Promise((resolve, reject) => {
+                              const reader = new FileReader();
+                              reader.onload = () => resolve(reader.result);
+                              reader.onerror = reject;
+                              reader.readAsDataURL(photoFile);
+                            });
+                            
+                            const newLibraryImage = {
+                              id: Date.now(),
+                              title: title || photoFile.name,
+                              url: base64,
+                              filename: photoFile.name,
+                              uploadedAt: new Date().toISOString()
+                            };
+                            
+                            await handleAddLibraryImage(newLibraryImage);
+                            e.target.reset();
+                            alert('Photo added to library successfully and saved globally! 🌍');
+                          } catch (error) {
+                            console.error('Error uploading photo:', error);
+                            alert('Error uploading photo. Please try again.');
+                          }
                         } else {
                           alert('Please select a photo to upload');
                         }
@@ -1830,7 +1860,7 @@ export default function App() {
                             }} 
                           />
                           <small style={{ color: '#888', fontSize: '12px' }}>
-                            Upload images for your photo library
+                            📸 Upload images - they will be saved globally for all users!
                           </small>
                         </div>
                         <button 
@@ -1844,7 +1874,7 @@ export default function App() {
                             cursor: 'pointer' 
                           }}
                         >
-                          Add to Library
+                          🌍 Add to Library (Global Save)
                         </button>
                       </form>
                     </div>
