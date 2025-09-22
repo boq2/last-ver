@@ -191,39 +191,8 @@ class GPTProfilesAPI {
       console.error('LocalStorage fallback failed:', error);
     }
     
-    // Return default profiles if everything fails
-    return [
-      {
-        id: 1,
-        name: "Dr. Sarah Chen",
-        photo: "https://images.unsplash.com/photo-1494790108755-2616b612b77c?w=800&h=800&fit=crop&crop=face&auto=format&q=90",
-        description: "AI Research Specialist with expertise in machine learning and neural networks. Passionate about advancing AI education and developing ethical AI solutions.",
-        specialties: ["Machine Learning", "Neural Networks", "AI Ethics"],
-        createdAt: "2024-01-01T00:00:00.000Z",
-        updatedAt: "2024-01-01T00:00:00.000Z",
-        isActive: true
-      },
-      {
-        id: 2,
-        name: "Ahmed Hassan",
-        photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=800&fit=crop&crop=face&auto=format&q=90",
-        description: "Cybersecurity expert with 8+ years in penetration testing and red team operations. CTF champion and security consultant.",
-        specialties: ["Penetration Testing", "Red Team", "CTF"],
-        createdAt: "2024-01-01T00:00:00.000Z",
-        updatedAt: "2024-01-01T00:00:00.000Z",
-        isActive: true
-      },
-      {
-        id: 3,
-        name: "Maria Rodriguez",
-        photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=800&h=800&fit=crop&crop=face&auto=format&q=90",
-        description: "Full-stack developer specializing in React, Node.js, and cloud architecture. Open source contributor and tech speaker.",
-        specialties: ["React", "Node.js", "Cloud Architecture"],
-        createdAt: "2024-01-01T00:00:00.000Z",
-        updatedAt: "2024-01-01T00:00:00.000Z",
-        isActive: true
-      }
-    ];
+    // Return empty array - no mock data
+    return [];
   }
 
   // LocalStorage CRUD operations for development fallback
@@ -239,8 +208,8 @@ class GPTProfilesAPI {
     
     // Initialize with default data
     const defaultData = {
-      profiles: this.getLocalStorageFallback().map(p => ({ ...p, isActive: true })),
-      lastId: 3,
+      profiles: [],
+      lastId: 0,
       version: "1.0.0",
       lastUpdated: new Date().toISOString()
     };

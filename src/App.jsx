@@ -429,30 +429,44 @@ function GPTLibrary({ onToggleSidebar, onProfileClick, gptProfiles, onGPTSelect 
       </div>
       
       <div className="gpt-gallery">
-        {gptProfiles.map((profile) => (
-          <div 
-            key={profile.id} 
-            className="gpt-profile-card"
-            onClick={() => onGPTSelect(profile)}
-          >
-            <div className="gpt-avatar">
-              <img 
-                src={profile.photo} 
-                alt={profile.name}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.parentElement.innerHTML = `<div class="avatar-initials-square">${profile.name.split(' ').map(n => n[0]).join('')}</div>`;
-                }}
-              />
+        {gptProfiles.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 12h8"/>
+                <path d="M12 8v8"/>
+              </svg>
             </div>
-            <div className="gpt-info">
-              <h3 className="gpt-name">{profile.name}</h3>
-              <p className="gpt-description">
-                {(profile.description || '').trim() || 'No description available'}
-              </p>
-            </div>
+            <h3>No GPT Profiles Yet</h3>
+            <p>GPT profiles will appear here when added by the admin.</p>
           </div>
-        ))}
+        ) : (
+          gptProfiles.map((profile) => (
+            <div 
+              key={profile.id} 
+              className="gpt-profile-card"
+              onClick={() => onGPTSelect(profile)}
+            >
+              <div className="gpt-avatar">
+                <img 
+                  src={profile.photo} 
+                  alt={profile.name}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = `<div class="avatar-initials-square">${profile.name.split(' ').map(n => n[0]).join('')}</div>`;
+                  }}
+                />
+              </div>
+              <div className="gpt-info">
+                <h3 className="gpt-name">{profile.name}</h3>
+                <p className="gpt-description">
+                  {(profile.description || '').trim() || 'No description available'}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -1321,6 +1335,11 @@ export default function App() {
       try {
         setIsLoadingProfiles(true);
         setApiError(null);
+        
+        // Clear any old localStorage data to ensure clean start
+        localStorage.removeItem('gptProfiles');
+        localStorage.removeItem('gptProfilesInitialized');
+        localStorage.removeItem('gptProfilesDB');
         
         const [profiles, stats] = await Promise.all([
           gptProfilesAPI.getAllProfiles(),

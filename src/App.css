@@ -2132,6 +2132,38 @@ body {
   font-weight: 500;
 }
 
+/* Empty State Styles */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #8e8ea0;
+  grid-column: 1 / -1; /* Span full width */
+}
+
+.empty-state-icon {
+  margin-bottom: 24px;
+  opacity: 0.5;
+}
+
+.empty-state-icon svg {
+  color: #666;
+}
+
+.empty-state h3 {
+  color: #ececf1;
+  font-size: 24px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.empty-state p {
+  font-size: 16px;
+  color: #8e8ea0;
+  max-width: 400px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
 .admin-form-container {
   background: #2d2d30;
   border-radius: 8px;
