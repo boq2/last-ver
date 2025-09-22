@@ -1361,6 +1361,27 @@ export default function App() {
     loadProfiles();
   }, []);
 
+  // Listen for storage changes to sync GPT profiles across tabs/components
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'gpt-profiles') {
+        console.log('GPT profiles updated, refreshing...');
+        const loadProfiles = async () => {
+          try {
+            const profiles = await gptProfilesAPI.getAllProfiles();
+            setGptProfiles(profiles);
+          } catch (error) {
+            console.error('Failed to refresh profiles:', error);
+          }
+        };
+        loadProfiles();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Library images state with local storage
   const [libraryImages, setLibraryImages] = useState(() => {
     const saved = localStorage.getItem('libraryImages');

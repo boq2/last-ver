@@ -56,10 +56,12 @@ class GPTProfilesAPI {
 
   // Add new profile
   async addProfile(profileData) {
-    // In development, use localStorage if API is not available
-    if (this.useLocalStorageFallback) {
-      return this.addToLocalStorage(profileData);
-    }
+    const newProfile = {
+      id: Date.now(),
+      ...profileData,
+      createdAt: new Date().toISOString(),
+      status: 'active'
+    };
 
     try {
       const response = await fetch(`${this.apiBase}/gpt-profiles`, {
@@ -67,20 +69,33 @@ class GPTProfilesAPI {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(profileData)
+        body: JSON.stringify(newProfile)
       });
 
       const data = await response.json();
       
       if (data.success) {
+        // Update localStorage immediately for consistency
+        this.addToLocalStorage(newProfile);
+        // Trigger storage event to sync across tabs/components
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'gpt-profiles',
+          newValue: JSON.stringify(this.getLocalStorageFallback())
+        }));
         return data.profile;
       } else {
         throw new Error(data.message || 'Failed to add profile');
       }
     } catch (error) {
-      console.error('Error adding profile:', error);
-      // Fallback to localStorage
-      return this.addToLocalStorage(profileData);
+      console.log('API not available, using localStorage sync:', error.message);
+      // Save to localStorage and trigger sync
+      const savedProfile = this.addToLocalStorage(newProfile);
+      // Trigger storage event to sync across tabs/components
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'gpt-profiles',
+        newValue: JSON.stringify(this.getLocalStorageFallback())
+      }));
+      return savedProfile;
     }
   }
 
