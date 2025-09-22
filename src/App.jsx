@@ -544,7 +544,7 @@ function AdminLogin({ onAdminLogin }) {
         </form>
         
         <div className="admin-login-footer">
-          <small style={{ color: '#6b7280', fontSize: '12px' }}>Demo credentials: admin / password123</small>
+          <small style={{ color: '#6b7280', fontSize: '12px' }}>Demo credentials: oth / asdddsaASD123</small>
         </div>
       </div>
     </div>
@@ -1480,6 +1480,7 @@ export default function App() {
 
   const handleAdminLogin = () => {
     setIsAdminAuthenticated(true);
+    setCurrentView('admin');
   };
 
   const handleAdminLogout = () => {
