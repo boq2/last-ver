@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import './App.css';
+import gptProfilesDB from './utils/gptProfilesDB.js';
 
 const mockConversations = [
   { id: 1, title: "About Me", preview: "Tell me about yourself" },
@@ -70,45 +71,6 @@ const projectsList = [
   { id: 10, name: "Smart Scheduling", url: "#", description: "AI class scheduler" },
   { id: 11, name: "College Display", url: "#", description: "Real-time lecture system" },
   { id: 12, name: "NTU Exam System", url: "#", description: "Online exam platform" }
-];
-
-// GPT profiles data
-const initialGPTProfiles = [
-  { 
-    id: 1, 
-    name: "Dr. Sarah Chen", 
-    photo: "https://images.unsplash.com/photo-1494790108755-2616b612b77c?w=800&h=800&fit=crop&crop=face&auto=format&q=90", 
-    description: "AI Research Specialist with expertise in machine learning and neural networks. Passionate about advancing AI education and developing ethical AI solutions.",
-    specialties: ["Machine Learning", "Neural Networks", "AI Ethics"]
-  },
-  { 
-    id: 2, 
-    name: "Ahmed Hassan", 
-    photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=800&fit=crop&crop=face&auto=format&q=90", 
-    description: "Cybersecurity expert with 8+ years in penetration testing and red team operations. CTF champion and security consultant.",
-    specialties: ["Penetration Testing", "Red Team", "CTF"]
-  },
-  { 
-    id: 3, 
-    name: "Maria Rodriguez", 
-    photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=800&h=800&fit=crop&crop=face&auto=format&q=90", 
-    description: "Full-stack developer specializing in React, Node.js, and cloud architecture. Open source contributor and tech speaker.",
-    specialties: ["React", "Node.js", "Cloud Architecture"]
-  },
-  { 
-    id: 4, 
-    name: "David Kim", 
-    photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=800&h=800&fit=crop&crop=face&auto=format&q=90", 
-    description: "Data scientist with expertise in Python, machine learning, and big data analytics. Research publication author and AI consultant.",
-    specialties: ["Python", "Data Science", "Big Data"]
-  },
-  { 
-    id: 5, 
-    name: "Othman's Life GPT", 
-    photo: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=800&h=800&fit=crop&crop=face&auto=format&q=90", 
-    description: "This GPT holds the important moments and people in Othman's GPT life.",
-    specialties: ["Life Stories", "Personal Moments", "Memories"]
-  }
 ];
 
 function PlusIcon() {
@@ -679,30 +641,33 @@ function AdminPanel({ onToggleSidebar, onProfileClick, gptProfiles, onAddGPT, on
     }
 
     const profileData = {
-      id: editingId || Date.now(),
       name,
       description,
       specialties: [], // Removed specialties field
       photo: photoToUse
     };
 
-    if (editingId) {
-      onEditGPT(profileData);
-      setEditingId(null);
-    } else {
-      onAddGPT(profileData);
+    try {
+      if (editingId) {
+        onEditGPT(editingId, profileData);
+        setEditingId(null);
+        alert('GPT profile updated successfully!');
+      } else {
+        onAddGPT(profileData);
+        alert('GPT profile added successfully!');
+      }
+      
+      // Reset form
+      setFormData({
+        name: '',
+        description: '',
+        photo: null
+      });
+      setPreviewUrl('');
+      setOriginalPhoto('');
+    } catch (error) {
+      alert('Error saving GPT profile: ' + error.message);
     }
-    
-    // Reset form
-    setFormData({
-      name: '',
-      description: '',
-      photo: null
-    });
-    setPreviewUrl('');
-    setOriginalPhoto('');
-    
-    alert(editingId ? 'GPT profile updated successfully!' : 'GPT profile added successfully!');
   };
 
   const handleLibrarySubmit = (e) => {
@@ -823,6 +788,25 @@ function AdminPanel({ onToggleSidebar, onProfileClick, gptProfiles, onAddGPT, on
         <div className="admin-content">
           {activeTab === 'gpts' ? (
             <>
+              {/* Database Statistics */}
+              <div className="admin-stats">
+                <h3>Database Statistics</h3>
+                <div className="stats-grid">
+                  <div className="stat-card">
+                    <span className="stat-number">{gptProfiles.length}</span>
+                    <span className="stat-label">Active GPT Profiles</span>
+                  </div>
+                  <div className="stat-card">
+                    <span className="stat-number">{gptProfilesDB.getStats().total}</span>
+                    <span className="stat-label">Total Profiles</span>
+                  </div>
+                  <div className="stat-card">
+                    <span className="stat-number">{gptProfilesDB.getStats().deleted}</span>
+                    <span className="stat-label">Deleted Profiles</span>
+                  </div>
+                </div>
+              </div>
+
               {/* GPT Management */}
               <div className="admin-form-container">
                 <h3>{editingId ? 'Edit GPT Profile' : 'Add New GPT Profile'}</h3>
@@ -1311,32 +1295,29 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth <= 768);
   const [showProfileModal, setShowProfileModal] = useState(false);
   
-  // GPT profiles state with local storage
-  const [gptProfiles, setGptProfiles] = useState(() => {
-    const saved = localStorage.getItem('gptProfiles');
-    if (saved !== null) {
-      return JSON.parse(saved);
-    }
-    // Only use initial data if localStorage has never been set
-    const hasBeenInitialized = localStorage.getItem('gptProfilesInitialized');
-    if (!hasBeenInitialized) {
-      localStorage.setItem('gptProfilesInitialized', 'true');
-      localStorage.setItem('gptProfiles', JSON.stringify(initialGPTProfiles));
-      return initialGPTProfiles;
-    }
-    return [];
-  });
+  // GPT profiles state using database
+  const [gptProfiles, setGptProfiles] = useState([]);
+
+  // Load GPT profiles from database on component mount
+  useEffect(() => {
+    const loadProfiles = () => {
+      try {
+        const profiles = gptProfilesDB.getAllProfiles();
+        setGptProfiles(profiles);
+      } catch (error) {
+        console.error('Failed to load GPT profiles:', error);
+        setGptProfiles([]);
+      }
+    };
+
+    loadProfiles();
+  }, []);
 
   // Library images state with local storage
   const [libraryImages, setLibraryImages] = useState(() => {
     const saved = localStorage.getItem('libraryImages');
     return saved ? JSON.parse(saved) : initialLibraryImages;
   });
-
-  // Save GPT profiles to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('gptProfiles', JSON.stringify(gptProfiles));
-  }, [gptProfiles]);
 
   // Save library images to localStorage whenever they change
   useEffect(() => {
@@ -1394,18 +1375,38 @@ export default function App() {
     // You can add logic here to open a chat with the selected GPT
   };
 
-  const handleAddGPT = (newGPT) => {
-    setGptProfiles(prev => [...prev, newGPT]);
+  const handleAddGPT = (newGPTData) => {
+    try {
+      const newGPT = gptProfilesDB.addProfile(newGPTData);
+      setGptProfiles(prev => [...prev, newGPT]);
+      return newGPT;
+    } catch (error) {
+      console.error('Failed to add GPT profile:', error);
+      throw error;
+    }
   };
 
-  const handleEditGPT = (updatedGPT) => {
-    setGptProfiles(prev => prev.map(profile => 
-      profile.id === updatedGPT.id ? updatedGPT : profile
-    ));
+  const handleEditGPT = (id, updatedData) => {
+    try {
+      const updatedGPT = gptProfilesDB.updateProfile(id, updatedData);
+      setGptProfiles(prev => prev.map(profile => 
+        profile.id === id ? updatedGPT : profile
+      ));
+      return updatedGPT;
+    } catch (error) {
+      console.error('Failed to update GPT profile:', error);
+      throw error;
+    }
   };
 
   const handleDeleteGPT = (id) => {
-    setGptProfiles(prev => prev.filter(profile => profile.id !== id));
+    try {
+      gptProfilesDB.deleteProfile(id);
+      setGptProfiles(prev => prev.filter(profile => profile.id !== id));
+    } catch (error) {
+      console.error('Failed to delete GPT profile:', error);
+      throw error;
+    }
   };
 
   const handleAddLibraryImage = (newImage) => {
