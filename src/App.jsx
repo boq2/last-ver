@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import './App.css';
-import gptProfilesDB from './utils/gptProfilesDB.js';
+import gptProfilesAPI from './utils/gptProfilesAPI.js';
 
 const mockConversations = [
   { id: 1, title: "About Me", preview: "Tell me about yourself" },
@@ -620,7 +620,7 @@ function AdminPanel({ onToggleSidebar, onProfileClick, gptProfiles, onAddGPT, on
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     const name = (formData.name || '').trim();
@@ -649,11 +649,11 @@ function AdminPanel({ onToggleSidebar, onProfileClick, gptProfiles, onAddGPT, on
 
     try {
       if (editingId) {
-        onEditGPT(editingId, profileData);
+        await onEditGPT(editingId, profileData);
         setEditingId(null);
         alert('GPT profile updated successfully!');
       } else {
-        onAddGPT(profileData);
+        await onAddGPT(profileData);
         alert('GPT profile added successfully!');
       }
       
@@ -715,9 +715,14 @@ function AdminPanel({ onToggleSidebar, onProfileClick, gptProfiles, onAddGPT, on
     setEditingId(null);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this profile?')) {
-      onDeleteGPT(id);
+      try {
+        await onDeleteGPT(id);
+        alert('Profile deleted successfully!');
+      } catch (error) {
+        alert('Error deleting profile: ' + error.message);
+      }
     }
   };
 
@@ -791,18 +796,27 @@ function AdminPanel({ onToggleSidebar, onProfileClick, gptProfiles, onAddGPT, on
               {/* Database Statistics */}
               <div className="admin-stats">
                 <h3>Database Statistics</h3>
+                {apiError && (
+                  <div className="api-error" style={{ color: '#ff6b6b', marginBottom: '16px', padding: '12px', background: '#2d1b1b', borderRadius: '6px', border: '1px solid #ff6b6b' }}>
+                    API Error: {apiError}
+                  </div>
+                )}
                 <div className="stats-grid">
                   <div className="stat-card">
-                    <span className="stat-number">{gptProfiles.length}</span>
+                    <span className="stat-number">{isLoadingProfiles ? '...' : gptProfiles.length}</span>
                     <span className="stat-label">Active GPT Profiles</span>
                   </div>
                   <div className="stat-card">
-                    <span className="stat-number">{gptProfilesDB.getStats().total}</span>
+                    <span className="stat-number">{isLoadingProfiles ? '...' : (apiStats?.total || 0)}</span>
                     <span className="stat-label">Total Profiles</span>
                   </div>
                   <div className="stat-card">
-                    <span className="stat-number">{gptProfilesDB.getStats().deleted}</span>
+                    <span className="stat-number">{isLoadingProfiles ? '...' : (apiStats?.deleted || 0)}</span>
                     <span className="stat-label">Deleted Profiles</span>
+                  </div>
+                  <div className="stat-card">
+                    <span className="stat-number">{apiError ? 'Offline' : 'Online'}</span>
+                    <span className="stat-label">API Status</span>
                   </div>
                 </div>
               </div>
@@ -1295,18 +1309,32 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth <= 768);
   const [showProfileModal, setShowProfileModal] = useState(false);
   
-  // GPT profiles state using database
+  // GPT profiles state using API
   const [gptProfiles, setGptProfiles] = useState([]);
+  const [apiStats, setApiStats] = useState(null);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(true);
+  const [apiError, setApiError] = useState(null);
 
-  // Load GPT profiles from database on component mount
+  // Load GPT profiles from API on component mount
   useEffect(() => {
-    const loadProfiles = () => {
+    const loadProfiles = async () => {
       try {
-        const profiles = gptProfilesDB.getAllProfiles();
+        setIsLoadingProfiles(true);
+        setApiError(null);
+        
+        const [profiles, stats] = await Promise.all([
+          gptProfilesAPI.getAllProfiles(),
+          gptProfilesAPI.getStats()
+        ]);
+        
         setGptProfiles(profiles);
+        setApiStats(stats);
       } catch (error) {
         console.error('Failed to load GPT profiles:', error);
+        setApiError(error.message);
         setGptProfiles([]);
+      } finally {
+        setIsLoadingProfiles(false);
       }
     };
 
@@ -1375,10 +1403,15 @@ export default function App() {
     // You can add logic here to open a chat with the selected GPT
   };
 
-  const handleAddGPT = (newGPTData) => {
+  const handleAddGPT = async (newGPTData) => {
     try {
-      const newGPT = gptProfilesDB.addProfile(newGPTData);
+      const newGPT = await gptProfilesAPI.addProfile(newGPTData);
       setGptProfiles(prev => [...prev, newGPT]);
+      
+      // Refresh stats
+      const stats = await gptProfilesAPI.getStats();
+      setApiStats(stats);
+      
       return newGPT;
     } catch (error) {
       console.error('Failed to add GPT profile:', error);
@@ -1386,12 +1419,17 @@ export default function App() {
     }
   };
 
-  const handleEditGPT = (id, updatedData) => {
+  const handleEditGPT = async (id, updatedData) => {
     try {
-      const updatedGPT = gptProfilesDB.updateProfile(id, updatedData);
+      const updatedGPT = await gptProfilesAPI.updateProfile(id, updatedData);
       setGptProfiles(prev => prev.map(profile => 
         profile.id === id ? updatedGPT : profile
       ));
+      
+      // Refresh stats
+      const stats = await gptProfilesAPI.getStats();
+      setApiStats(stats);
+      
       return updatedGPT;
     } catch (error) {
       console.error('Failed to update GPT profile:', error);
@@ -1399,10 +1437,14 @@ export default function App() {
     }
   };
 
-  const handleDeleteGPT = (id) => {
+  const handleDeleteGPT = async (id) => {
     try {
-      gptProfilesDB.deleteProfile(id);
+      await gptProfilesAPI.deleteProfile(id);
       setGptProfiles(prev => prev.filter(profile => profile.id !== id));
+      
+      // Refresh stats
+      const stats = await gptProfilesAPI.getStats();
+      setApiStats(stats);
     } catch (error) {
       console.error('Failed to delete GPT profile:', error);
       throw error;
