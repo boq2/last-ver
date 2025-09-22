@@ -440,6 +440,9 @@ function GPTLibrary({ onToggleSidebar, onProfileClick, gptProfiles, onGPTSelect 
             </div>
             <h3>No GPT Profiles Yet</h3>
             <p>GPT profiles will appear here when added by the admin.</p>
+            <small style={{ color: '#666', marginTop: '10px', display: 'block' }}>
+              Debug: {gptProfiles.length} profiles loaded | Loading: {isLoadingProfiles.toString()} | Error: {apiError || 'none'}
+            </small>
           </div>
         ) : (
           gptProfiles.map((profile) => (
@@ -1379,8 +1382,25 @@ export default function App() {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+    
+    // Also set up periodic sync every 5 seconds for development
+    const syncInterval = setInterval(async () => {
+      try {
+        const profiles = await gptProfilesAPI.getAllProfiles();
+        if (JSON.stringify(profiles) !== JSON.stringify(gptProfiles)) {
+          console.log('Profiles changed, updating...');
+          setGptProfiles(profiles);
+        }
+      } catch (error) {
+        // Ignore errors during sync
+      }
+    }, 5000);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(syncInterval);
+    };
+  }, [gptProfiles]);
 
   // Library images state with local storage
   const [libraryImages, setLibraryImages] = useState(() => {
@@ -1447,11 +1467,28 @@ export default function App() {
   const handleAddGPT = async (newGPTData) => {
     try {
       const newGPT = await gptProfilesAPI.addProfile(newGPTData);
-      setGptProfiles(prev => [...prev, newGPT]);
+      
+      // Force immediate update of local state
+      setGptProfiles(prev => {
+        const updated = [...prev, newGPT];
+        console.log('Updated GPT profiles:', updated);
+        return updated;
+      });
       
       // Refresh stats
       const stats = await gptProfilesAPI.getStats();
       setApiStats(stats);
+      
+      // Force a complete refresh from storage to ensure sync
+      setTimeout(async () => {
+        try {
+          const allProfiles = await gptProfilesAPI.getAllProfiles();
+          setGptProfiles(allProfiles);
+          console.log('Synced profiles after add:', allProfiles);
+        } catch (error) {
+          console.error('Sync error:', error);
+        }
+      }, 100);
       
       return newGPT;
     } catch (error) {
@@ -1669,7 +1706,7 @@ export default function App() {
                         try {
                           await handleAddGPT(newGPT);
                           e.target.reset();
-                          alert('GPT Profile added successfully and saved globally! 🌍');
+                          alert(`GPT Profile "${newGPT.name}" added successfully and saved globally! 🌍\n\nCheck the GPTs section in the sidebar to see it appear.`);
                         } catch (error) {
                           console.error('Error adding GPT:', error);
                           alert('Error saving GPT profile. Please try again.');
