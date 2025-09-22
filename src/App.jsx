@@ -1319,6 +1319,7 @@ export default function App() {
   const [selectedChat, setSelectedChat] = useState(1);
   const [selectedGPT, setSelectedGPT] = useState(null);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [activeTab, setActiveTab] = useState('gpts'); // For admin panel tabs
   // Start with sidebar collapsed on mobile, open on desktop
   const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth <= 768);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -1533,18 +1534,387 @@ export default function App() {
       case 'admin':
         if (isAdminAuthenticated) {
           return (
-            <AdminPanel 
-              onToggleSidebar={toggleSidebar}
-              onProfileClick={handleProfileClick}
-              gptProfiles={gptProfiles}
-              onAddGPT={handleAddGPT}
-              onEditGPT={handleEditGPT}
-              onDeleteGPT={handleDeleteGPT}
-              onAdminLogout={handleAdminLogout}
-              libraryImages={libraryImages}
-              onAddLibraryImage={handleAddLibraryImage}
-              onDeleteLibraryImage={handleDeleteLibraryImage}
-            />
+            <div className="chat-area">
+              <div className="chat-header">
+                <div className="header-main">
+                  <div className="header-left">
+                    <button className="collapse-btn" onClick={toggleSidebar}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="header-center">
+                    <div className="chat-title-container">
+                      <OthmanLogo />
+                      <h1>Admin Panel</h1>
+                    </div>
+                  </div>
+                  <div className="header-right">
+                    <button 
+                      className="admin-logout-btn" 
+                      onClick={handleAdminLogout}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        marginRight: '10px'
+                      }}
+                    >
+                      Logout
+                    </button>
+                    <button className="profile-btn" onClick={handleProfileClick}>
+                      <div className="avatar-small">
+                        <img src="/profile-photo.jpg" alt="Othman Yehia" />
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ padding: '20px', color: 'white' }}>
+                {/* Tab Navigation */}
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                  <button 
+                    onClick={() => setActiveTab('gpts')}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: activeTab === 'gpts' ? '#10b981' : '#2d2d30',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    GPT Profiles
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('library')}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: activeTab === 'library' ? '#10b981' : '#2d2d30',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Photo Library
+                  </button>
+                </div>
+
+                {/* GPT Profiles Tab */}
+                {activeTab === 'gpts' && (
+                  <>
+                    <h2>✅ GPT Profiles Management</h2>
+                    <p>Current GPT Profiles: {gptProfiles ? gptProfiles.length : 0}</p>
+                    
+                    <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#2d2d30', borderRadius: '8px' }}>
+                      <h3>Add New GPT Profile</h3>
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.target);
+                        const photoFile = formData.get('photo');
+                        
+                        let photoUrl = '/gpt-profiles/default-avatar.svg';
+                        if (photoFile && photoFile.size > 0) {
+                          // Create a temporary URL for the uploaded image
+                          photoUrl = URL.createObjectURL(photoFile);
+                        }
+                        
+                        const newGPT = {
+                          id: Date.now(),
+                          name: formData.get('name'),
+                          description: formData.get('description'),
+                          photo: photoUrl,
+                          createdAt: new Date().toISOString()
+                        };
+                        handleAddGPT(newGPT);
+                        e.target.reset();
+                        alert('GPT Profile added successfully!');
+                      }}>
+                        <div style={{ marginBottom: '15px' }}>
+                          <label style={{ display: 'block', marginBottom: '5px' }}>Name:</label>
+                          <input 
+                            name="name" 
+                            type="text" 
+                            required 
+                            placeholder="e.g., Code Assistant GPT"
+                            style={{ 
+                              width: '100%', 
+                              padding: '8px', 
+                              backgroundColor: '#40414f', 
+                              border: '1px solid #565869', 
+                              borderRadius: '4px', 
+                              color: 'white' 
+                            }} 
+                          />
+                        </div>
+                        <div style={{ marginBottom: '15px' }}>
+                          <label style={{ display: 'block', marginBottom: '5px' }}>Description:</label>
+                          <textarea 
+                            name="description" 
+                            required 
+                            rows="3"
+                            placeholder="Describe what this GPT does..."
+                            style={{ 
+                              width: '100%', 
+                              padding: '8px', 
+                              backgroundColor: '#40414f', 
+                              border: '1px solid #565869', 
+                              borderRadius: '4px', 
+                              color: 'white',
+                              resize: 'vertical'
+                            }} 
+                          />
+                        </div>
+                        <div style={{ marginBottom: '15px' }}>
+                          <label style={{ display: 'block', marginBottom: '5px' }}>Photo:</label>
+                          <input 
+                            name="photo" 
+                            type="file" 
+                            accept="image/*"
+                            style={{ 
+                              width: '100%', 
+                              padding: '8px', 
+                              backgroundColor: '#40414f', 
+                              border: '1px solid #565869', 
+                              borderRadius: '4px', 
+                              color: 'white' 
+                            }} 
+                          />
+                          <small style={{ color: '#888', fontSize: '12px' }}>
+                            Upload an image for this GPT profile (optional)
+                          </small>
+                        </div>
+                        <button 
+                          type="submit"
+                          style={{ 
+                            padding: '10px 20px', 
+                            backgroundColor: '#10b981', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '6px', 
+                            cursor: 'pointer' 
+                          }}
+                        >
+                          Add GPT Profile
+                        </button>
+                      </form>
+                    </div>
+
+                    {gptProfiles && gptProfiles.length > 0 && (
+                      <div style={{ marginTop: '20px' }}>
+                        <h3>Current GPT Profiles:</h3>
+                        <div style={{ display: 'grid', gap: '15px' }}>
+                          {gptProfiles.map(gpt => (
+                            <div 
+                              key={gpt.id} 
+                              style={{ 
+                                padding: '15px', 
+                                backgroundColor: '#2d2d30', 
+                                borderRadius: '8px',
+                                display: 'flex',
+                                gap: '15px',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <img 
+                                src={gpt.photo || '/gpt-profiles/default-avatar.svg'} 
+                                alt={gpt.name}
+                                style={{
+                                  width: '60px',
+                                  height: '60px',
+                                  borderRadius: '50%',
+                                  objectFit: 'cover',
+                                  backgroundColor: '#40414f'
+                                }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <h4>{gpt.name}</h4>
+                                <p style={{ color: '#ccc', fontSize: '14px', margin: '5px 0' }}>{gpt.description}</p>
+                                {gpt.createdAt && (
+                                  <small style={{ color: '#888', fontSize: '12px' }}>
+                                    Created: {new Date(gpt.createdAt).toLocaleDateString()}
+                                  </small>
+                                )}
+                              </div>
+                              <button 
+                                onClick={() => {
+                                  if (confirm(`Delete ${gpt.name}?`)) {
+                                    handleDeleteGPT(gpt.id);
+                                  }
+                                }}
+                                style={{ 
+                                  padding: '8px 12px', 
+                                  backgroundColor: '#ef4444', 
+                                  color: 'white', 
+                                  border: 'none', 
+                                  borderRadius: '4px', 
+                                  cursor: 'pointer' 
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Photo Library Tab */}
+                {activeTab === 'library' && (
+                  <>
+                    <h2>📚 Photo Library Management</h2>
+                    <p>Manage your photo collection</p>
+                    
+                    <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#2d2d30', borderRadius: '8px' }}>
+                      <h3>Add New Photo to Library</h3>
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.target);
+                        const photoFile = formData.get('libraryPhoto');
+                        const title = formData.get('title');
+                        
+                        if (photoFile && photoFile.size > 0) {
+                          const photoUrl = URL.createObjectURL(photoFile);
+                          const newLibraryImage = {
+                            id: Date.now(),
+                            title: title || photoFile.name,
+                            url: photoUrl,
+                            filename: photoFile.name,
+                            uploadedAt: new Date().toISOString()
+                          };
+                          handleAddLibraryImage(newLibraryImage);
+                          e.target.reset();
+                          alert('Photo added to library successfully!');
+                        } else {
+                          alert('Please select a photo to upload');
+                        }
+                      }}>
+                        <div style={{ marginBottom: '15px' }}>
+                          <label style={{ display: 'block', marginBottom: '5px' }}>Photo Title (optional):</label>
+                          <input 
+                            name="title" 
+                            type="text" 
+                            placeholder="e.g., Portfolio Screenshot, Project Demo"
+                            style={{ 
+                              width: '100%', 
+                              padding: '8px', 
+                              backgroundColor: '#40414f', 
+                              border: '1px solid #565869', 
+                              borderRadius: '4px', 
+                              color: 'white' 
+                            }} 
+                          />
+                        </div>
+                        <div style={{ marginBottom: '15px' }}>
+                          <label style={{ display: 'block', marginBottom: '5px' }}>Select Photo:</label>
+                          <input 
+                            name="libraryPhoto" 
+                            type="file" 
+                            accept="image/*"
+                            required
+                            style={{ 
+                              width: '100%', 
+                              padding: '8px', 
+                              backgroundColor: '#40414f', 
+                              border: '1px solid #565869', 
+                              borderRadius: '4px', 
+                              color: 'white' 
+                            }} 
+                          />
+                          <small style={{ color: '#888', fontSize: '12px' }}>
+                            Upload images for your photo library
+                          </small>
+                        </div>
+                        <button 
+                          type="submit"
+                          style={{ 
+                            padding: '10px 20px', 
+                            backgroundColor: '#3b82f6', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '6px', 
+                            cursor: 'pointer' 
+                          }}
+                        >
+                          Add to Library
+                        </button>
+                      </form>
+                    </div>
+
+                    {libraryImages && libraryImages.length > 0 && (
+                      <div style={{ marginTop: '20px' }}>
+                        <h3>Photo Library ({libraryImages.length} photos):</h3>
+                        <div style={{ 
+                          display: 'grid', 
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
+                          gap: '15px',
+                          marginTop: '15px'
+                        }}>
+                          {libraryImages.map(image => (
+                            <div 
+                              key={image.id} 
+                              style={{ 
+                                backgroundColor: '#2d2d30', 
+                                borderRadius: '8px',
+                                overflow: 'hidden'
+                              }}
+                            >
+                              <img 
+                                src={image.url} 
+                                alt={image.title || image.filename}
+                                style={{
+                                  width: '100%',
+                                  height: '150px',
+                                  objectFit: 'cover'
+                                }}
+                              />
+                              <div style={{ padding: '10px' }}>
+                                <h5 style={{ margin: '0 0 5px 0', fontSize: '14px' }}>
+                                  {image.title || image.filename}
+                                </h5>
+                                {image.uploadedAt && (
+                                  <small style={{ color: '#888', fontSize: '11px' }}>
+                                    {new Date(image.uploadedAt).toLocaleDateString()}
+                                  </small>
+                                )}
+                                <button 
+                                  onClick={() => {
+                                    if (confirm('Delete this photo from library?')) {
+                                      handleDeleteLibraryImage(image.id);
+                                    }
+                                  }}
+                                  style={{ 
+                                    width: '100%',
+                                    marginTop: '8px',
+                                    padding: '6px', 
+                                    backgroundColor: '#ef4444', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    borderRadius: '4px', 
+                                    cursor: 'pointer',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           );
         } else {
           return <AdminLogin onAdminLogin={handleAdminLogin} />;
